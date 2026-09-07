@@ -97,13 +97,13 @@ type tlsProbeStrategy struct {
 	name   string
 	useSNI bool
 	// forceTLS12 lowers the ceiling to TLS 1.2. It does not lower the floor:
-	// Go's client refuses TLS 1.0 and 1.1 by default, and this does not change
-	// that.
+	// crypto/tls refuses TLS 1.0 and 1.1 by default and this does not change
+	// that. The strategy is named for the ceiling for that reason.
 	forceTLS12 bool
-	// insecureSuites offers the suites Go excludes from its default client
-	// configuration in addition to the default ones. Only set on the retry
-	// that runs after every ordinary strategy has failed.
-	insecureSuites bool
+	// observation marks the strategy as belonging to the observation channel,
+	// which dials on wider terms than anything that carries traffic. See
+	// tls_observation_channel.go.
+	observation bool
 }
 
 type tlsProbeOutcome struct {
@@ -376,41 +376,9 @@ func buildTLSProbeStrategies(hostname string) []tlsProbeStrategy {
 	}
 	strategies = append(strategies,
 		tlsProbeStrategy{name: "tls-no-sni"},
-		tlsProbeStrategy{name: "tls12-fallback", forceTLS12: true},
+		tlsProbeStrategy{name: "tls12-ceiling", forceTLS12: true},
 	)
 	return strategies
-}
-
-// buildTLSInsecureSuiteStrategy is the single extra dial attempted only after
-// every ordinary strategy has failed. A server that negotiates nothing outside
-// Go's insecure list refuses the default ClientHello outright, and a refused
-// handshake costs far more than its ciphers: the certificate, the negotiated
-// version and the TLS banner are all lost with it. So the host with the
-// weakest configuration on an estate is the one the scan learns least about,
-// which inverts the failure mode with respect to risk.
-func buildTLSInsecureSuiteStrategy(hostname string) tlsProbeStrategy {
-	strategy := tlsProbeStrategy{name: "tls-insecure-suites", insecureSuites: true}
-	hostname = strings.TrimSpace(hostname)
-	if hostname != "" && net.ParseIP(hostname) == nil {
-		strategy.useSNI = true
-	}
-	return strategy
-}
-
-// tlsWidenedCipherSuiteIDs is Go's default client suite list plus the ones it
-// excludes by default. Note that this widens TLS 1.0-1.2 only: TLS 1.3 suites
-// are not configurable in crypto/tls, and are unaffected either way.
-func tlsWidenedCipherSuiteIDs() []uint16 {
-	secure := tls.CipherSuites()
-	insecure := tls.InsecureCipherSuites()
-	ids := make([]uint16, 0, len(secure)+len(insecure))
-	for _, suite := range secure {
-		ids = append(ids, suite.ID)
-	}
-	for _, suite := range insecure {
-		ids = append(ids, suite.ID)
-	}
-	return ids
 }
 
 func tlsStrategyNames(strategies []tlsProbeStrategy) []string {
@@ -518,17 +486,20 @@ func probeTLSDetails(ctx context.Context, target, hostname string, port int, opt
 		}
 	}
 
-	// Only on the failure path, and only once: a healthy service has already
-	// been read by this point and pays nothing for this. Reaching here means
-	// no ordinary strategy completed a handshake, and offering the suites Go
-	// excludes is the difference between a full TLS observation and silence.
+	// The observation channel runs only where it can add something: a service
+	// every ordinary strategy already read has been observed, and dialing it
+	// again on wider terms would return the same negotiation at the cost of an
+	// extra handshake. crypto/tls picks the highest version both sides accept,
+	// so a wide dial against a healthy server reports exactly what the strict
+	// one did. Reaching here means the service was not read at all, which is
+	// the case the channel exists for.
 	if bestScore < 0 {
 		log.Debug().
 			Str("module", tlsNativeProbeModuleName).
 			Str("target", target).
 			Int("port", port).
-			Msg("All TLS strategies failed, retrying with Go's insecure cipher suites")
-		runStrategy(buildTLSInsecureSuiteStrategy(hostname), 0)
+			Msg("No strategy completed a handshake, falling back to the observation channel")
+		runStrategy(buildTLSObservationStrategy(hostname), 0)
 	}
 
 	if bestScore >= 0 {
@@ -589,8 +560,8 @@ func probeSingleTLSStrategy(
 	if strategy.forceTLS12 {
 		tlsConfig.MaxVersion = tls.VersionTLS12
 	}
-	if strategy.insecureSuites {
-		tlsConfig.CipherSuites = tlsWidenedCipherSuiteIDs()
+	if strategy.observation {
+		applyTLSObservationConfig(tlsConfig)
 	}
 
 	tlsDialer := &tls.Dialer{
