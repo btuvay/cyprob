@@ -223,7 +223,6 @@ cyprob/
 │   ├── storage/         # Scan result persistence and queries
 │   └── version/          # Version information
 ├── ui/                   # Web UI (React/TypeScript) - In Development
-├── docs/                 # Documentation website (Docusaurus)
 └── scripts/              # Build and packaging scripts
 ```
 
@@ -412,10 +411,10 @@ func init() {
 
 For comprehensive documentation, visit:
 
-- **Documentation Site**: https://cyprob.io (dedicated docs site in development)
-- **Getting Started Guide**: [docs/getting-started/installation.md](docs/docs/getting-started/installation.md)
-- **CLI Reference**: [docs/cli/overview.md](docs/docs/cli/overview.md)
-- **Architecture Overview**: [docs/architecture/overview.md](docs/docs/architecture/overview.md)
+- **Documentation Site**: https://docs.cyprob.io
+- **Getting Started Guide**: https://docs.cyprob.io/getting-started/installation
+- **CLI Reference**: https://docs.cyprob.io/cli/overview
+- **Architecture Overview**: https://docs.cyprob.io/architecture/overview
 
 ## 🤝 Contributing
 
