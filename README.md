@@ -223,6 +223,7 @@ cyprob/
 │   ├── storage/         # Scan result persistence and queries
 │   └── version/          # Version information
 ├── ui/                   # Web UI (React/TypeScript) - In Development
+├── docs/cli/             # CLI reference (Markdown)
 └── scripts/              # Build and packaging scripts
 ```
 
@@ -412,9 +413,9 @@ func init() {
 For comprehensive documentation, visit:
 
 - **Documentation Site**: https://docs.cyprob.io
-- **Getting Started Guide**: https://docs.cyprob.io/getting-started/installation
-- **CLI Reference**: https://docs.cyprob.io/cli/overview
-- **Architecture Overview**: https://docs.cyprob.io/architecture/overview
+- **Getting Started Guide**: https://docs.cyprob.io/quick-start
+- **CLI Reference**: [docs/cli/overview.md](docs/cli/overview.md) (in this repository)
+- **Architecture Overview**: https://docs.cyprob.io/architecture-deep-dive
 
 ## 🤝 Contributing
 
@@ -449,7 +450,7 @@ Licensed under the Apache License, Version 2.0. See [LICENSE.md](LICENSE.md) for
 ## 🔗 Links
 
 - **Website**: https://cyprob.io
-- **Documentation**: https://cyprob.io (dedicated docs site in development)
+- **Documentation**: https://docs.cyprob.io
 - **GitHub**: https://github.com/cyprob/cyprob
 - **Issues**: https://github.com/cyprob/cyprob/issues
 - **Discussions**: https://github.com/cyprob/cyprob/discussions
